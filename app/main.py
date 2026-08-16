@@ -174,6 +174,8 @@ async def server_error_handler(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
+from app.ssr import render_ssr_page
+
 for folder in ("css", "js", "assets"):
     path = FRONTEND_DIR / folder
     if path.exists():
@@ -184,8 +186,15 @@ app.mount("/uploads", StaticFiles(directory=str(PRODUCT_UPLOADS_DIR.parent)), na
 
 
 @app.get("/")
+@app.get("/index.html")
 async def serve_index():
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return await render_ssr_page(FRONTEND_DIR / "index.html", page_type="home")
+
+
+@app.get("/products.html")
+@app.get("/products")
+async def serve_products():
+    return await render_ssr_page(FRONTEND_DIR / "products.html", page_type="products")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -205,12 +214,14 @@ async def serve_admin_tools():
     return FileResponse(FRONTEND_DIR / "admin.html")
 
 
-for page in HTML_PAGES[1:]:
+for page in HTML_PAGES:
+    if page in ("index.html", "products.html"):
+        continue
     route = f"/{page}"
 
     def make_handler(filename: str):
         async def handler():
-            return FileResponse(FRONTEND_DIR / filename)
+            return await render_ssr_page(FRONTEND_DIR / filename, page_type="general")
 
         return handler
 
@@ -229,13 +240,17 @@ async def api_unmatched(api_path: str):
 
 @app.get("/{page_path:path}", include_in_schema=False)
 async def spa_fallback(page_path: str):
-    """Serve HTML pages without .html extension if file exists."""
+    """Serve HTML pages with SSR pre-injected data."""
     if page_path.startswith("api/"):
         return JSONResponse(status_code=404, content={"detail": "Not found"})
     candidate = FRONTEND_DIR / page_path
     if candidate.is_file():
+        if candidate.suffix == ".html":
+            ptype = "home" if "index" in candidate.stem else ("products" if "products" in candidate.stem else "general")
+            return await render_ssr_page(candidate, page_type=ptype)
         return FileResponse(candidate)
     html_candidate = FRONTEND_DIR / f"{page_path}.html"
     if html_candidate.is_file():
-        return FileResponse(html_candidate)
+        ptype = "home" if "index" in html_candidate.stem else ("products" if "products" in html_candidate.stem else "general")
+        return await render_ssr_page(html_candidate, page_type=ptype)
     return JSONResponse(status_code=404, content={"detail": "Not found"})

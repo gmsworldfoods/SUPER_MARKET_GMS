@@ -315,6 +315,10 @@ function loadCatalogFromBootstrap(data) {
 
 function whenMetadataReady() {
     if (_metadataReady) return Promise.resolve();
+    if (window.__INITIAL_METADATA__) {
+        applyCatalogMetadata(window.__INITIAL_METADATA__);
+        return Promise.resolve();
+    }
     if (!_metadataReadyPromise) {
         _metadataReadyPromise = fetchCatalogMetadata()
             .then(applyCatalogMetadata)
@@ -329,6 +333,15 @@ function whenMetadataReady() {
 
 function whenCatalogReady() {
     if (_dataReady) return Promise.resolve();
+    if (window.__INITIAL_BOOTSTRAP__) {
+        loadCatalogFromBootstrap(window.__INITIAL_BOOTSTRAP__);
+        return Promise.resolve();
+    }
+    if (window.__INITIAL_PRODUCTS__) {
+        if (window.__INITIAL_METADATA__) applyCatalogMetadata(window.__INITIAL_METADATA__);
+        loadCatalogProductsOnly(window.__INITIAL_PRODUCTS__);
+        return Promise.resolve();
+    }
     if (!_dataReadyPromise) {
         // Metadata + products in parallel (metadata is not required to start products fetch)
         _dataReadyPromise = Promise.all([
@@ -352,6 +365,10 @@ function whenCatalogReady() {
 
 function whenHomeProductsReady() {
     if (ALL_PRODUCTS.length) return Promise.resolve();
+    if (window.__INITIAL_HOME_PRODUCTS__) {
+        mergeProductsIntoCatalog((window.__INITIAL_HOME_PRODUCTS__ && window.__INITIAL_HOME_PRODUCTS__.products) || []);
+        return Promise.resolve();
+    }
     if (!_homeProductsReadyPromise) {
         _homeProductsReadyPromise = fetchHomeProducts()
             .then(payload => {
@@ -364,6 +381,21 @@ function whenHomeProductsReady() {
             });
     }
     return _homeProductsReadyPromise;
+}
+
+// Auto-consume SSR pre-loaded state on script initialization
+if (typeof window !== 'undefined') {
+    if (window.__INITIAL_METADATA__) {
+        applyCatalogMetadata(window.__INITIAL_METADATA__);
+    }
+    if (window.__INITIAL_HOME_PRODUCTS__) {
+        mergeProductsIntoCatalog((window.__INITIAL_HOME_PRODUCTS__ && window.__INITIAL_HOME_PRODUCTS__.products) || []);
+    }
+    if (window.__INITIAL_BOOTSTRAP__) {
+        loadCatalogFromBootstrap(window.__INITIAL_BOOTSTRAP__);
+    } else if (window.__INITIAL_PRODUCTS__) {
+        loadCatalogProductsOnly(window.__INITIAL_PRODUCTS__);
+    }
 }
 
 function getCategoryStats() {
