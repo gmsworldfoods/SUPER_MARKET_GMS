@@ -83,20 +83,23 @@ let cultureBannersTimer = null;
 
 async function prefetchCultureBanners() {
     if (cultureBannersData.length) return cultureBannersData;
-    try {
-        const res = await fetch('/api/v1/cultures');
-        if (!res.ok) return [];
-        const rows = await res.json();
-        cultureBannersData = (rows || []).map(b => ({
-            image: (b.image_url || b.imageUrl || '').trim(),
-            href: (b.link_url || b.linkUrl || 'products.html').trim() || 'products.html',
-            title: b.title || '',
-        })).filter(b => b.image);
-        return cultureBannersData;
-    } catch (err) {
-        console.error('Culture banners fetch failed:', err);
-        return [];
+    const metaCultures = (window.__INITIAL_METADATA__ && window.__INITIAL_METADATA__.cultures) ||
+                         (typeof CATEGORY_METADATA !== 'undefined' && CATEGORY_METADATA && CATEGORY_METADATA.cultures);
+    let rows = metaCultures;
+    if (!rows || !rows.length) {
+        try {
+            const res = await fetch('/api/v1/cultures');
+            if (res.ok) rows = await res.json();
+        } catch (err) {
+            console.error('Culture banners fetch failed:', err);
+        }
     }
+    cultureBannersData = (rows || []).map(b => ({
+        image: (b.image_url || b.imageUrl || '').trim(),
+        href: (b.link_url || b.linkUrl || 'products.html').trim() || 'products.html',
+        title: b.title || '',
+    })).filter(b => b.image);
+    return cultureBannersData;
 }
 
 const TOP_BANNER_COPY = {
@@ -595,24 +598,27 @@ function renderTestimonials() {
     const carousel = document.getElementById('testimonials-carousel');
     if (!carousel) return;
 
-    fetch('/api/v1/testimonials')
-        .then(r => r.ok ? r.json() : [])
-        .catch(() => [])
-        .then(items => {
-            const list = Array.isArray(items) ? items : [];
-            const section = carousel.closest('.section');
-            if (!list.length) {
-                carousel.innerHTML = '';
-                if (section) section.style.display = 'none';
-                return;
-            }
-            if (section) section.style.display = '';
-            carousel.innerHTML = list.map(buildTestimonialCardHTML).join('');
-            if (typeof observeFadeElements === 'function') {
-                observeFadeElements(carousel.querySelectorAll('.testimonial-card'));
-            }
-            initTestimonialsCarousel();
-        });
+    const metaTestimonials = (window.__INITIAL_METADATA__ && window.__INITIAL_METADATA__.testimonials) ||
+                             (typeof CATEGORY_METADATA !== 'undefined' && CATEGORY_METADATA && CATEGORY_METADATA.testimonials);
+    const getItems = metaTestimonials && metaTestimonials.length
+        ? Promise.resolve(metaTestimonials)
+        : fetch('/api/v1/testimonials').then(r => r.ok ? r.json() : []).catch(() => []);
+
+    getItems.then(items => {
+        const list = Array.isArray(items) ? items : [];
+        const section = carousel.closest('.section');
+        if (!list.length) {
+            carousel.innerHTML = '';
+            if (section) section.style.display = 'none';
+            return;
+        }
+        if (section) section.style.display = '';
+        carousel.innerHTML = list.map(buildTestimonialCardHTML).join('');
+        if (typeof observeFadeElements === 'function') {
+            observeFadeElements(carousel.querySelectorAll('.testimonial-card'));
+        }
+        initTestimonialsCarousel();
+    });
 }
 
 function initTestimonialsCarousel() {

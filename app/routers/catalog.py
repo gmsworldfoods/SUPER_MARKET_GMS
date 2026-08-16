@@ -194,6 +194,8 @@ async def _load_catalog_metadata(db: AsyncSession) -> dict:
     promo_banners = _build_promotion_banners(banner_rows, cat_stats)
     promo = [b["imageUrl"] for b in promo_banners]
     site_settings = await load_public_site_settings(db)
+    cultures = [c.model_dump() for c in await _load_active_cultures(db)]
+    testimonials = [t.model_dump() for t in await _load_featured_testimonials(db)]
 
     result = {
         "categoryStats": cat_stats,
@@ -201,6 +203,8 @@ async def _load_catalog_metadata(db: AsyncSession) -> dict:
         "promotionBannerImages": promo,
         "promotionBanners": promo_banners,
         "siteSettings": site_settings,
+        "cultures": cultures,
+        "testimonials": testimonials,
     }
     _cache_set("catalog_metadata", result)
     return result

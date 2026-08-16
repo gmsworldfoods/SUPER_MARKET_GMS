@@ -281,6 +281,10 @@ const GmsShoppingStore = (function () {
         _boundUserId = uid;
         _localTs = Math.max(Date.now(), serverTs, guestParsed.ts || 0);
         persist(false);
+        if (_syncTimer) {
+            clearTimeout(_syncTimer);
+            _syncTimer = null;
+        }
         try {
             await pushToServer();
         } catch (_) {}
@@ -317,10 +321,19 @@ const GmsShoppingStore = (function () {
      * - If local cart is newer → keep local and push
      * - If equal age → keep local (already matches after previous push)
      */
-    async function syncFromServer() {
+    let _lastSyncMs = 0;
+    const SYNC_COOLDOWN_MS = 10000;
+
+    async function syncFromServer(force = false) {
         ensureReady();
         const uid = currentUserId();
         if (!uid) return;
+
+        const now = Date.now();
+        if (!force && (now - _lastSyncMs < SYNC_COOLDOWN_MS)) {
+            return;
+        }
+        _lastSyncMs = now;
 
         let serverMap = new Map();
         let serverTs = 0;
@@ -396,15 +409,11 @@ const GmsShoppingStore = (function () {
     function bindVisibilitySync() {
         if (_visibilityBound) return;
         _visibilityBound = true;
-        const pullIfSignedIn = () => {
-            if (!currentUserId()) return;
-            syncFromServer().catch(() => {});
-        };
         document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible') pullIfSignedIn();
+            if (document.visibilityState === 'visible' && currentUserId()) {
+                syncFromServer().catch(() => {});
+            }
         });
-        window.addEventListener('pageshow', pullIfSignedIn);
-        window.addEventListener('focus', pullIfSignedIn);
     }
 
     function getCartMapObject() {
