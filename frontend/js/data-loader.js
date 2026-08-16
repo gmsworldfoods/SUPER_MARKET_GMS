@@ -36,41 +36,14 @@ let _homeProductsReadyPromise = null;
 let _warmupReadyPromise = null;
 
 function sleepMs(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return Promise.resolve();
 }
 
-/**
- * Wait until /api/v1/health reports db_ready (or warmup finished/errored).
- * Keeps the page usable while Neon cold-starts.
- */
-function whenServerWarmupReady(timeoutMs = 25000) {
-    if (_warmupReadyPromise) return _warmupReadyPromise;
-    _warmupReadyPromise = (async () => {
-        const started = Date.now();
-        let attempt = 0;
-        while (Date.now() - started < timeoutMs) {
-            try {
-                const res = await fetch(`${API_BASE}/api/v1/health`, { cache: 'no-store' });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.db_ready || data.warmup === 'ready' || data.warmup === 'error') {
-                        return data;
-                    }
-                }
-            } catch (_) {
-                /* server still binding */
-            }
-            attempt += 1;
-            await sleepMs(Math.min(250 + attempt * 150, 1200));
-        }
-        return null;
-    })().finally(() => {
-        /* allow a later retry if the first wait timed out */
-    });
-    return _warmupReadyPromise;
+function whenServerWarmupReady(timeoutMs = 0) {
+    return Promise.resolve(null);
 }
 
-async function fetchJsonWithRetry(url, { retries = 5, baseDelayMs = 350, cacheMode = undefined } = {}) {
+async function fetchJsonWithRetry(url, { retries = 3, cacheMode = undefined } = {}) {
     let lastError = null;
     const fetchOpts = cacheMode ? { cache: cacheMode } : {};
     for (let attempt = 0; attempt < retries; attempt += 1) {
@@ -78,14 +51,12 @@ async function fetchJsonWithRetry(url, { retries = 5, baseDelayMs = 350, cacheMo
             const res = await fetch(url, fetchOpts);
             if (res.status === 502 || res.status === 503 || res.status === 504) {
                 lastError = new Error(`Temporary upstream error (${res.status})`);
-                await sleepMs(baseDelayMs * (attempt + 1));
                 continue;
             }
             if (!res.ok) throw new Error(`Request failed (${res.status}) for ${url}`);
             return await res.json();
         } catch (err) {
             lastError = err;
-            await sleepMs(baseDelayMs * (attempt + 1));
         }
     }
     throw lastError || new Error(`Request failed for ${url}`);

@@ -79,9 +79,6 @@ const CustomerAPI = {
         let lastError = null;
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
             try {
-                if (typeof whenServerWarmupReady === 'function' && attempt === 0) {
-                    await whenServerWarmupReady(20000);
-                }
                 const fetchOpts = { ...options, headers };
                 if (!fetchOpts.cache && (options.method && options.method.toUpperCase() !== 'GET')) {
                     fetchOpts.cache = 'no-store';
@@ -103,7 +100,6 @@ const CustomerAPI = {
                             : 'Store is still starting up. Please try again in a moment.'
                     );
                     lastError.status = res.status;
-                    await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
                     continue;
                 }
                 if (!res.ok) {
@@ -118,7 +114,6 @@ const CustomerAPI = {
             } catch (err) {
                 if (err && err.status && err.status !== 503 && err.status !== 502) throw err;
                 lastError = err;
-                await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
             }
         }
         throw lastError || new Error('Request failed');

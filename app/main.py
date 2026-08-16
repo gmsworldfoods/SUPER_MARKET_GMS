@@ -83,29 +83,16 @@ async def _warmup_admin_cache() -> None:
 
 
 async def _run_startup_warmup() -> None:
-    """DB + cache warmup with a few retries (Neon serverless cold starts)."""
-    delays = (0.0, 1.5, 3.0, 5.0)
-    last_exc: Exception | None = None
-    for attempt, delay in enumerate(delays, start=1):
-        if delay:
-            await asyncio.sleep(delay)
-        try:
-            await _warmup_db()
-            await _warmup_catalog_cache()
-            await _warmup_admin_cache()
-            startup_warmup.mark_warmup_complete()
-            logger.info("Background startup warmup complete (attempt %s).", attempt)
-            return
-        except Exception as exc:
-            last_exc = exc
-            logger.warning(
-                "Startup warmup attempt %s/%s failed: %s",
-                attempt,
-                len(delays),
-                exc,
-            )
-    startup_warmup.mark_warmup_complete(error=str(last_exc) if last_exc else "unknown")
-    logger.error("Startup warmup gave up after retries: %s", last_exc)
+    """DB + cache warmup."""
+    try:
+        await _warmup_db()
+        await _warmup_catalog_cache()
+        await _warmup_admin_cache()
+        startup_warmup.mark_warmup_complete()
+        logger.info("Background startup warmup complete.")
+    except Exception as exc:
+        startup_warmup.mark_warmup_complete(error=str(exc))
+        logger.warning("Startup warmup error: %s", exc)
 
 
 @asynccontextmanager

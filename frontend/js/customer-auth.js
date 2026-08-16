@@ -468,8 +468,7 @@ function hideAuthLoading() {
 }
 
 function waitAtLeast(startedAt, minMs) {
-    const wait = Math.max(0, minMs - (Date.now() - startedAt));
-    return new Promise((resolve) => setTimeout(resolve, wait));
+    return Promise.resolve();
 }
 
 function bindAccountDropdownOnce() {
@@ -500,7 +499,6 @@ function bindAccountDropdownOnce() {
                 .catch(() => {})
                 .then(() => CustomerAPI.logout())
                 .catch(() => {})
-                .then(() => waitAtLeast(started, LOGOUT_LOADING_MS))
                 .finally(() => {
                     clearAuthSession();
                     try {
@@ -642,9 +640,6 @@ function initLoginPage() {
 
         const started = Date.now();
         try {
-            if (typeof whenServerWarmupReady === 'function') {
-                await whenServerWarmupReady(20000);
-            }
             const res = await CustomerAPI.login(login, password);
             if (res.user.role !== 'customer' && res.user.role !== 'admin') {
                 throw new Error('This account cannot sign in here.');
@@ -653,7 +648,6 @@ function initLoginPage() {
             if (typeof GmsShoppingStore !== 'undefined') {
                 await GmsShoppingStore.onLogin();
             }
-            await waitAtLeast(started, LOADING_MS);
             window.location.href = postLoginDestination();
         } catch (err) {
             hideAuthLoading();
@@ -689,8 +683,6 @@ function initSignupPage() {
 
     populatePhoneCountrySelect(countrySelect, 'GB');
     bindPasswordToggles(form);
-
-    fetch('/api/v1/health').catch(() => {});
 
     if (CustomerAPI.isLoggedIn()) {
         window.location.replace(postLoginDestination());
@@ -745,15 +737,11 @@ function initSignupPage() {
 
         const started = Date.now();
         try {
-            if (typeof whenServerWarmupReady === 'function') {
-                await whenServerWarmupReady(20000);
-            }
             const res = await CustomerAPI.register(payload);
             persistAuthSession(res.session_token, res.user);
             if (typeof GmsShoppingStore !== 'undefined') {
                 await GmsShoppingStore.onLogin();
             }
-            await waitAtLeast(started, LOADING_MS);
             window.location.href = postLoginDestination();
         } catch (err) {
             hideAuthLoading();

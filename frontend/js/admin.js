@@ -213,36 +213,31 @@ function showAdminExitLoading(message) {
 }
 
 function waitAtLeastAdmin(startedAt, minMs) {
-    const wait = Math.max(0, minMs - (Date.now() - startedAt));
-    return new Promise((resolve) => setTimeout(resolve, wait));
+    return Promise.resolve();
 }
 
 async function exitToStorefront() {
-    const started = Date.now();
     showAdminExitLoading('Signing you out…');
     _appReady = false;
     markAdminSession(false);
     acClear();
     document.getElementById('admin-shell')?.classList.add('hidden');
     await clearAllAuthSessions();
-    await waitAtLeastAdmin(started, 600);
     redirectToStorefront();
 }
 
 async function exitToLogin() {
-    const started = Date.now();
     showAdminExitLoading('Signing you out…');
     _appReady = false;
     markAdminSession(false);
     acClear();
     document.getElementById('admin-shell')?.classList.add('hidden');
     await clearAllAuthSessions();
-    await waitAtLeastAdmin(started, 600);
     redirectToLogin();
 }
 
 function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return Promise.resolve();
 }
 
 let _appReady = false;
@@ -267,7 +262,6 @@ async function validateAdminSession() {
                 await exitToLogin();
                 return false;
             }
-            if (attempt < 2) await sleep(350 * (attempt + 1));
         }
     }
     showSessionWarning();
