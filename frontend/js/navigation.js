@@ -6,6 +6,9 @@ function initNavigation() {
     const drawerClose = document.getElementById('drawer-close');
     const backToTop = document.getElementById('back-to-top');
 
+    // Ensure body scroll lock is cleared when navigation initializes
+    document.body.classList.remove('drawer-open', 'modal-open');
+
     if (header) {
         requestAnimationFrame(() => header.classList.add('header-visible'));
     }
@@ -21,8 +24,11 @@ function initNavigation() {
     }
 
     if (mobileDrawer) {
-        mobileDrawer.querySelectorAll('a').forEach(link => {
-            link.addEventListener('click', () => closeDrawer(mobileDrawer, drawerOverlay, menuToggle));
+        // Event delegation so dynamically created subcategory links close the drawer on mobile
+        mobileDrawer.addEventListener('click', (e) => {
+            if (e.target.closest('a')) {
+                closeDrawer(mobileDrawer, drawerOverlay, menuToggle);
+            }
         });
     }
 

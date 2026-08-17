@@ -44,7 +44,7 @@ body {
     font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
     color: var(--text);
     background: var(--white);
-    overflow-x: hidden;
+    overflow-x: clip;
     line-height: 1.6;
 }
 body.drawer-open,
@@ -335,6 +335,9 @@ p  { color: var(--text-muted); }
     width: min(960px, calc(100vw - 40px));
     max-height: min(70vh, 540px);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
     background: var(--white);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -471,9 +474,10 @@ p  { color: var(--text-muted); }
     background: rgba(0,0,0,.55);
     z-index: 1100;
     opacity: 0; visibility: hidden;
+    pointer-events: none;
     transition: opacity .3s ease, visibility .3s ease;
 }
-.drawer-overlay.open { opacity: 1; visibility: visible; }
+.drawer-overlay.open { opacity: 1; visibility: visible; pointer-events: auto; }
 .mobile-drawer {
     position: fixed; top: 0; left: 0;
     width: min(320px, 88vw); height: 100vh;
@@ -6356,7 +6360,8 @@ table {
    ============================================================ */
 @media (max-width: 767px) {
     /* Prevent horizontal scroll globally */
-    html, body { overflow-x: hidden; max-width: 100vw; }
+    html { overflow-x: clip; }
+    body { overflow-x: clip; width: 100%; max-width: 100vw; }
 
     /* Container */
     .container { padding: 0 16px; }
@@ -7125,7 +7130,7 @@ table {
 
 /* ── Overscroll: page never bounces into blank space ────────── */
 html {
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
 }
 body {
     overscroll-behavior-y: auto;
@@ -7135,9 +7140,11 @@ body {
 .mobile-drawer,
 .mobile-filter-sheet,
 .filter-panel-scroll,
-.phone-country-menu {
+.phone-country-menu,
+.sub-nav-dropdown {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 /* ── Tap highlight: remove grey flash on Android ────────────── */
@@ -7539,16 +7546,23 @@ a, button, [role="button"], .fp-card, .cat-card,
 
 /* ── No horizontal scroll — hard guarantee ──────────────────── */
 @media (max-width: 1199px) {
-    html, body {
+    html {
         max-width: 100%;
-        overflow-x: hidden;
+        overflow-x: clip;
+    }
+    body {
+        max-width: 100%;
+        overflow-x: clip;
     }
     /* Keep header overflow visible so search/account dropdowns aren't clipped */
     main, footer, section, aside, .browse-bar {
         max-width: 100%;
     }
-    main, footer, .browse-bar {
+    main, footer {
         overflow-x: hidden;
+    }
+    .browse-bar {
+        overflow: visible;
     }
     /* Sections that host horizontal carousels must allow child scroll */
     .featured-products-section,
@@ -8371,11 +8385,17 @@ a, button, [role="button"], .fp-card, .cat-card,
         z-index: 1;
         overflow: visible;
         padding: 12px 12px 88px;
+        touch-action: pan-y pinch-zoom;
+        -webkit-overflow-scrolling: touch;
     }
+    .catalog-page,
+    .catalog-layout,
     #product-grid.fp-grid--catalog {
         position: relative;
         z-index: 0;
         clear: both;
+        touch-action: pan-y pinch-zoom;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
